@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Visitors Tab: Old UIKit vs. New SwiftUI</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#0d0b14; --bg2:#16131f; --bg3:#1e1a2b; --line:#2c2740;
+    --ink:#ece9f5; --muted:#a29bc0; --dim:#766f93;
+    --pink:#ff0099; --pink2:#ff4fb8; --blue:#5aa2ff; --green:#3fd08a; --amber:#ffc24b; --red:#ff5d6c; --violet:#b48bff;
+    --old:#ff9a4b; --new:#5ad1c4;
+    --radius:14px; --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#241a35 0,transparent 60%),var(--bg);
+    color:var(--ink);font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans CJK TC",sans-serif;}
+  a{color:var(--pink2);text-decoration:none}
+  code{font-family:var(--mono);background:#241f33;padding:1px 6px;border-radius:6px;font-size:.85em;color:#d9d2f5;border:1px solid #322b46}
+  h1,h2,h3{line-height:1.25;font-weight:680}
+  h2{font-size:1.5rem;margin:0 0 6px;display:flex;align-items:center;gap:10px}
+  h2 .n{font-size:.95rem;color:var(--bg);background:var(--pink);width:30px;height:30px;display:grid;place-items:center;border-radius:9px;flex:none}
+  h3{font-size:1.1rem;color:#dcd6f2;margin:26px 0 8px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+
+  /* nav */
+  header.top{position:sticky;top:0;z-index:50;background:rgba(13,11,20,.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 0}
+  .brand{font-weight:760;margin-right:auto;letter-spacing:.2px}
+  .brand .dot{color:var(--pink)}
+  .nav a.pill{font-size:.82rem;color:var(--muted);padding:6px 11px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+  .nav a.pill:hover{color:var(--ink);background:var(--bg3);border-color:var(--line)}
+
+  .hero{padding:46px 0 26px}
+  .hero h1{font-size:2.3rem;margin:0 0 10px;letter-spacing:-.5px}
+  .hero h1 .swap{background:linear-gradient(90deg,var(--old),var(--new));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p.lead{color:var(--muted);font-size:1.05rem;max-width:760px;margin:0 0 18px}
+  .meta{display:flex;gap:8px;flex-wrap:wrap}
+  .tag{font-size:.76rem;color:var(--muted);background:var(--bg2);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+  .tag b{color:var(--ink)}
+
+  section{padding:30px 0;border-top:1px solid var(--line)}
+  .sub{color:var(--muted);max-width:820px;margin:2px 0 14px}
+
+  /* TLDR cards */
+  .grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+  .card{background:linear-gradient(180deg,var(--bg2),var(--bg));border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px}
+  .card .k{font-size:.74rem;text-transform:uppercase;letter-spacing:.6px;color:var(--dim);margin-bottom:6px}
+  .card p{margin:0;color:#cfc9e6;font-size:.92rem}
+  .card.pink{border-color:#5a1840;background:linear-gradient(180deg,#251020,var(--bg))}
+  .card.blue{border-color:#1c3a5e}
+  .card.green{border-color:#1c4a39}
+
+  /* table */
+  .tbl{width:100%;border-collapse:collapse;font-size:.9rem;background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .tbl th,.tbl td{padding:10px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+  .tbl th{background:var(--bg3);color:#cdc6e8;font-weight:640;font-size:.82rem;position:sticky;top:54px}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td:first-child{color:#cdc6e8;white-space:nowrap;font-weight:600}
+  .scrollx{overflow-x:auto;border-radius:var(--radius)}
+  .old{color:var(--old)} .new{color:var(--new)}
+  .colhead-old{color:var(--old)} .colhead-new{color:var(--new)}
+  .fl{font-family:var(--mono);font-size:.78rem;color:var(--dim);display:block;margin-top:3px}
+
+  /* arch diagrams */
+  .toggle{display:inline-flex;background:var(--bg3);border:1px solid var(--line);border-radius:999px;padding:3px;gap:3px;margin-bottom:14px}
+  .toggle button{background:transparent;border:none;color:var(--muted);padding:7px 16px;border-radius:999px;cursor:pointer;font-size:.85rem;font-weight:600}
+  .toggle button.on{background:var(--pink);color:#1a0512}
+  .mermaid{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:none;overflow-x:auto}
+  .mermaid.show{display:block}
+
+  /* explorer */
+  .explorer{display:grid;grid-template-columns:300px 1fr;gap:18px}
+  @media(max-width:880px){.explorer{grid-template-columns:1fr}.tbl th{position:static}}
+  .panel{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .ctrl{margin-bottom:15px}
+  .ctrl .lbl{font-size:.82rem;color:#cdc6e8;font-weight:640;margin-bottom:7px;display:flex;align-items:center;gap:6px}
+  .ctrl .lbl .fk{font-family:var(--mono);font-size:.68rem;color:var(--dim);font-weight:400}
+  .seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg button{flex:1;background:transparent;border:none;color:var(--muted);padding:8px 6px;cursor:pointer;font-size:.8rem;border-right:1px solid var(--line)}
+  .seg button:last-child{border-right:none}
+  .seg button.on{background:var(--violet);color:#150a25;font-weight:700}
+  .seg button:disabled{opacity:.32;cursor:not-allowed}
+  .out{display:flex;flex-direction:column;gap:14px}
+  .resolved{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font-size:.8rem;padding:6px 11px;border-radius:8px;background:var(--bg3);border:1px solid var(--line);color:#d6d0ef}
+  .chip b{color:#fff}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.twocol{grid-template-columns:1fr}}
+  .imp{border-radius:12px;padding:14px;border:1px solid var(--line)}
+  .imp.oldbox{background:linear-gradient(180deg,#251a10,var(--bg));border-color:#4a3415}
+  .imp.newbox{background:linear-gradient(180deg,#0f2420,var(--bg));border-color:#16463e}
+  .imp h4{margin:0 0 10px;font-size:.92rem;display:flex;align-items:center;gap:8px}
+  .imp h4 .b{width:9px;height:9px;border-radius:50%}
+  .imp .row{font-size:.85rem;margin:7px 0;color:#cfc9e6}
+  .imp .row .t{color:var(--dim);font-size:.74rem;text-transform:uppercase;letter-spacing:.5px;display:block}
+  .warn{background:linear-gradient(180deg,#2a1320,var(--bg));border:1px solid #6a2440;border-radius:12px;padding:12px 14px;font-size:.86rem;color:#ffd0e4;display:flex;gap:10px}
+  .warn .ic{color:var(--pink2);font-size:1.1rem;flex:none}
+  .warn.ok{background:linear-gradient(180deg,#0f2418,var(--bg));border-color:#1c4a39;color:#c7f0d8}
+  .warn.ok .ic{color:var(--green)}
+  .api-pill{display:inline-block;font-family:var(--mono);font-size:.74rem;padding:4px 9px;border-radius:7px;margin:3px 4px 0 0;border:1px solid}
+  .api-pill.v4{background:#10243a;border-color:#1c4a72;color:#9cc8ff}
+  .api-pill.v5{background:#231038;border-color:#4a2a72;color:#cba8ff}
+  .api-pill.dec{background:#2a1020;border-color:#6a2440;color:#ffaad0}
+
+  /* config catalog */
+  .filterbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+  .filterbar input{flex:1;min-width:200px;background:var(--bg2);border:1px solid var(--line);color:var(--ink);padding:10px 13px;border-radius:10px;font-size:.9rem}
+  .filterbar input:focus{outline:none;border-color:var(--pink)}
+  .fbtn{background:var(--bg2);border:1px solid var(--line);color:var(--muted);padding:8px 13px;border-radius:999px;cursor:pointer;font-size:.8rem}
+  .fbtn.on{background:var(--pink);color:#1a0512;border-color:var(--pink);font-weight:650}
+  .cfg{background:var(--bg2);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+  .cfg summary{padding:13px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;list-style:none;flex-wrap:wrap}
+  .cfg summary::-webkit-details-marker{display:none}
+  .cfg summary .nm{font-family:var(--mono);font-size:.92rem;color:#fff;font-weight:600}
+  .cfg summary .badge{font-size:.68rem;padding:3px 8px;border-radius:999px;border:1px solid}
+  .badge.flagr{background:#10243a;border-color:#1c4a72;color:#9cc8ff}
+  .badge.derived{background:#2a1c10;border-color:#6a4a24;color:#ffcf9c}
+  .badge.removed{background:#241025;border-color:#5a2466;color:#e0a8ff}
+  .badge.struct{background:#102a1c;border-color:#1c6a44;color:#9cf0c0}
+  .cfg summary .what{color:var(--muted);font-size:.84rem;margin-left:auto}
+  .cfg .body{padding:0 16px 15px;border-top:1px solid var(--line)}
+  .cfg .body .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  @media(max-width:720px){.cfg .body .row2{grid-template-columns:1fr}}
+  .kv{margin:9px 0}
+  .kv .t{font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);margin-bottom:2px}
+  .kv .v{font-size:.87rem;color:#d4cee8}
+  .gotcha{background:#1d1430;border:1px solid #3a2c5c;border-radius:9px;padding:9px 12px;font-size:.84rem;color:#d9ccff;margin-top:10px}
+  .gotcha b{color:var(--violet)}
+
+  .callout{background:linear-gradient(180deg,#2a1024,var(--bg));border:1px solid #6a2450;border-radius:var(--radius);padding:18px 20px;margin:18px 0}
+  .callout h3{margin:0 0 8px;color:var(--pink2)}
+  .callout .matrix{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+  @media(max-width:720px){.callout .matrix{grid-template-columns:1fr}}
+  .mx{border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:.85rem;background:var(--bg2)}
+  .mx .h{font-weight:680;margin-bottom:4px}
+  .mx.noop{border-color:#6a4a24}
+  .mx.noop .h{color:var(--amber)}
+  .mx.act .h{color:var(--green)}
+
+  ul.clean{margin:6px 0;padding-left:18px} ul.clean li{margin:5px 0;color:#cfc9e6}
+  .files{font-family:var(--mono);font-size:.8rem;color:var(--muted);background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;line-height:1.9}
+  footer{padding:40px 0 60px;color:var(--dim);font-size:.84rem;border-top:1px solid var(--line)}
+  .divergence{border-left:3px solid var(--amber);padding:4px 0 4px 14px;margin:10px 0}
+  .divergence.intent{border-color:var(--blue)}
+  .divergence.fixed{border-color:var(--green)}
+  .divergence .h{font-weight:640;color:#e6e0f5}
+  .divergence .d{color:var(--muted);font-size:.86rem}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin:6px 0 14px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap nav">
+    <span class="brand">Visitors Tab<span class="dot">·</span>Old vs. New</span>
+    <a class="pill" href="#tldr">Short version</a>
+    <a class="pill" href="#compare">Comparison</a>
+    <a class="pill" href="#arch">Diagrams</a>
+    <a class="pill" href="#explorer">Config Explorer</a>
+    <a class="pill" href="#catalog">Config catalog</a>
+    <a class="pill" href="#api">API</a>
+    <a class="pill" href="#deps">Dependencies</a>
+    <a class="pill" href="#notes">Design notes</a>
+    <a class="pill" href="#glossary">Glossary</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>The Visitors Tab: <span class="swap">UIKit → SwiftUI</span></h1>
+    <p class="lead">A quick guide for the team — what the old UIKit version of the Visitors tab does, what the new SwiftUI version does, why we rewrote it, and how the two are wired together. A single Flagr flag, <code>visitors/implementation</code>, decides which one runs.</p>
+    <div class="meta">
+      <span class="tag">Ground rule: <b>the code is the source of truth</b></span>
+      <span class="tag">References point to files &amp; types <b>by name</b> (line numbers move)</span>
+    </div>
+  </div>
+</div>
+
+<!-- TLDR -->
+<section id="tldr"><div class="wrap">
+  <h2><span class="n">1</span>The short version</h2>
+  <p class="sub">The headlines first; the details are in the sections below.</p>
+  <div class="grid-cards">
+    <div class="card pink"><div class="k">One flag flips the whole tab</div><p><code>visitors/implementation</code> = <span class="old">uikit</span> / <span class="new">swiftui</span>. <code>AppMasterWireframe.makeVisitorsWireframe</code> picks one. <b>Default is uikit</b>, so if the flag is off you get the old version unchanged.</p></div>
+    <div class="card"><div class="k">Old = "frozen" UIKit</div><p>Config is locked in at <code>VisitorsContainerWireframe.init</code> and the tabs are built once. Everything hangs off Storyboards/xibs, the <code>VisitorsManager</code> singleton, and Combine subscriptions.</p></div>
+    <div class="card green"><div class="k">New = "injectable" SwiftUI</div><p>All UI lives in <code>Packages/DesignSystem</code> with <b>no networking code</b>. Data goes through the stateless <code>VisitorsRepository</code>; state is <code>@Observable</code>; navigation/analytics are injected as closures.</p></div>
+    <div class="card"><div class="k">Why we rewrote it</div><p>The old version is hard to test and change (Storyboard outlets, a forever-living singleton, empty states juggled with <code>isHidden</code>, layout hacks). The new one is built so "remove the old path" is "delete one folder."</p></div>
+    <div class="card blue"><div class="k">The glue lives in one file</div><p><code>VisitorsHostingController</code> is the UIKit↔SwiftUI boundary; <code>SwiftUIVisitorsWireframe</code> is just a thin wrapper around it.</p></div>
+    <div class="card"><div class="k">The new version still leans on the old singleton</div><p>App-wide counts the singleton owns — the tab badge, the paywall's visitor count, the Picks upsell — plus a few analytics events. The new code recomputes its own counts and <code>.send()</code>s them back so existing consumers keep working (~a dozen references left).</p></div>
+    <div class="card pink"><div class="k">The gotcha: two independent flags</div><p><code>screen_version</code> (grid vs. single-profile feed) and <code>declining_visitors_place</code> (whether the decline UI shows) are independent — but turning on single-profile quietly makes <code>declining_visitors_place</code> do nothing.</p></div>
+  </div>
+</div></section>
+
+<!-- COMPARE -->
+<section id="compare"><div class="wrap">
+  <h2><span class="n">2</span>Side-by-side comparison</h2>
+  <p class="sub"><span class="old">■ orange = old UIKit</span>&nbsp;&nbsp;<span class="new">■ green = new SwiftUI</span></p>
+  <div class="scrollx"><table class="tbl">
+    <thead><tr><th>Aspect</th><th class="colhead-old">Old UIKit (flag off)</th><th class="colhead-new">New SwiftUI (flag on)</th></tr></thead>
+    <tbody>
+      <tr><td>Entry point</td><td><code>VisitorsContainerWireframe</code> → <code>VisitorsWireframe</code></td><td><code>SwiftUIVisitorsWireframe</code> (thin shim) → <code>VisitorsHostingController</code></td></tr>
+      <tr><td>Container</td><td><code>VisitorsContainer</code> (code-only VC) + a vertical stack view holding the header + <code>MultiPageViewController</code></td><td><code>VisitorsHostingController</code> (a <code>LimitScreenshotViewController</code>) embedding a <code>UIHostingController&lt;Visitors.Screen&gt;</code> child</td></tr>
+      <tr><td>List rendering</td><td><code>UICollectionView</code> grid + xib cell <code>BWFProfileTransparentCell</code></td><td>2-column <code>LazyVGrid</code> (<code>Visitors.GridView</code>); single-profile mode uses <code>CardFeedView</code></td></tr>
+      <tr><td>Paging</td><td><code>UIPageViewController</code> + <code>CustomSegmentHeader</code></td><td><code>Visitors.PagerView</code>: a <code>SegmentHeader</code> over a custom horizontal paging <code>ScrollView</code> (deliberately not the native <code>TabView(.page)</code>)</td></tr>
+      <tr><td>Data layer</td><td><code>VisitorsManager</code> god-object singleton (networking + caching + counts + analytics + Flagr fetch + logout cleanup)</td><td><code>VisitorsRepository</code>, a stateless struct (transport only); each tab's <code>Visitors.ListViewModel</code> holds its own cache</td></tr>
+      <tr><td>State</td><td>Combine subjects (<code>WhoViewedMeStore</code> + subscribers listening to a refresh subject)</td><td><code>@Observable</code> (<code>ListViewModel</code> / <code>CardFeedViewModel</code> / <code>GridPresentation</code>) + an <code>InputHandler</code> on the shared store</td></tr>
+      <tr><td>When config applies</td><td><b>Frozen at init</b> (<code>VisitorsContainerWireframe</code>; <code>Config</code> fields all <code>let</code>)</td><td>Immutable <code>Configuration</code> (the variant shape) + a re-computable <code>@Observable GridPresentation</code> (per-user)</td></tr>
+      <tr><td>Navigation</td><td>Wireframe methods push/present directly (<code>showYouLiked</code> / <code>presentProfileDetails</code> / <code>showPaywall</code>), with Storyboard casts</td><td>Injected closures (<code>CellActions</code>, the detail/You-Liked/single-profile handlers)</td></tr>
+      <tr><td>UIKit / SwiftUI mix</td><td>Almost all UIKit; ~5 small SwiftUI embeds (filters empty state, single-profile feed, photo-verified intro, filters sheet…)</td><td>The whole tab is SwiftUI; UIKit is just the host shell + the navigation bridge</td></tr>
+      <tr><td>Testability</td><td><span class="old">Low</span> (Storyboard-bound, long-lived singleton, ObjC anchors)</td><td><span class="new">High</span> (a pure SwiftUI + value-type package; closures you can mock)</td></tr>
+      <tr><td>Cost to remove later</td><td>—</td><td><span class="new">Low</span>: the package folder is self-contained, so "remove the old path" is "delete the folder"</td></tr>
+    </tbody>
+  </table></div>
+</div></section>
+
+<!-- ARCH -->
+<section id="arch"><div class="wrap">
+  <h2><span class="n">3</span>Architecture diagrams</h2>
+  <p class="sub">Both versions start from the same entry point, <code>AppMasterWireframe.makeVisitorsWireframe</code>, and split on the flag. Use the buttons to switch.</p>
+  <div class="toggle">
+    <button id="btnOld" class="on" onclick="showArch('old')">Old UIKit</button>
+    <button id="btnNew" onclick="showArch('new')">New SwiftUI</button>
+  </div>
+  <div id="archOld" class="mermaid show">
+flowchart TD
+  E["AppMasterWireframe.makeVisitorsWireframe<br/>visitors/implementation == uikit"]:::entry
+  E --> CW["VisitorsContainerWireframe<br/><i>config frozen at init</i>"]:::old
+  CW --> WF["VisitorsWireframe<br/>builds tabs · owns WhoViewedMeStore · all navigation"]:::old
+  WF --> C["VisitorsContainer<br/>UIKit multi-page host (stack view)"]:::old
+  C --> FH["Filters header (SwiftUI)<br/><i>filters layout only</i>"]:::su
+  C --> MP["MultiPageViewController<br/>UIPageViewController + CustomSegmentHeader"]:::old
+  MP --> L["BWFWhoViewedMeViewController (local)<br/>storyboard WhoViewedMeSub"]:::old
+  MP --> W["BWFWhoViewedMeViewController (worldwide / filters)"]:::old
+  MP --> Y["BWFMyLikesVC (You-Liked)"]:::old
+  L --> CV["UICollectionView + BWFProfileTransparentCell (xib)"]:::old
+  L --> ES["empty / go-premium states (xib)"]:::old
+  L --> SF["[single-profile] SwiftUI feed<br/>laid over the collection view"]:::su
+  DATA["VisitorsManager singleton<br/>networking + cache + counts + analytics"]:::data
+  L -.subscribes to refresh.-> DATA
+  W -.-> DATA
+  classDef entry fill:#2a1f3e,stroke:#ff0099,color:#fff;
+  classDef old fill:#241a10,stroke:#ff9a4b,color:#ffe6cf;
+  classDef su fill:#0f2420,stroke:#5ad1c4,color:#c7f0e8;
+  classDef data fill:#1a1230,stroke:#b48bff,color:#e3d6ff;
+  </div>
+  <div id="archNew" class="mermaid">
+flowchart TD
+  E["AppMasterWireframe.makeVisitorsWireframe<br/>visitors/implementation == swiftui"]:::entry
+  E --> SW["SwiftUIVisitorsWireframe<br/><i>thin shim</i>"]:::new
+  SW --> H["VisitorsHostingController<br/><i>main-actor orchestrator (UIKit / SwiftUI boundary)</i><br/>makeConfiguration / makeLayout / CellActions"]:::new
+  H --> SC["UIHostingController of Visitors.Screen<br/>full-screen child"]:::new
+  SC --> PKG["DesignSystem package<br/>Visitors.Screen"]:::pkg
+  PKG --> PG["PagerView (SegmentHeader + paging ScrollView)<br/><i>default layout</i>"]:::pkg
+  PKG --> VS["VStack (single header + content)<br/><i>filters layout</i>"]:::pkg
+  PG --> TC["TabContentView GridView / CardFeedView"]:::pkg
+  VS --> FV["FiltersView V1/V2 (header) + GridView / CardFeedView"]:::pkg
+  H --> SP["+SingleProfile (CardFeedViewModel + card + modal presenters)"]:::new
+  H --> YL["+YouLiked (filters: nav-bar button pushes YouLikedViewController)"]:::new
+  REPO["VisitorsRepository (stateless transport)<br/>wrapped in loader closures"]:::data
+  H -.injects loader.-> REPO
+  VM["VisitorsManager singleton (~12 references left)<br/>app-wide counts / badge / a few analytics"]:::leg
+  H -.pushes counts back.-> VM
+  classDef entry fill:#2a1f3e,stroke:#ff0099,color:#fff;
+  classDef new fill:#0f2420,stroke:#5ad1c4,color:#c7f0e8;
+  classDef pkg fill:#10243a,stroke:#5aa2ff,color:#cfe4ff;
+  classDef data fill:#1a1230,stroke:#b48bff,color:#e3d6ff;
+  classDef leg fill:#241a10,stroke:#ff9a4b,color:#ffe6cf;
+  </div>
+</div></section>
+
+<!-- EXPLORER -->
+<section id="explorer"><div class="wrap">
+  <h2><span class="n">4</span>Interactive config explorer</h2>
+  <p class="sub">Adjust the config / account state on the left, and the right side updates live: the resolved shape, what the old vs. new version shows, which APIs get called, and any gotchas. It's the fastest way to understand how the flags interact.</p>
+  <div class="explorer">
+    <div class="panel" id="controls"><!-- controls injected --></div>
+    <div class="out" id="output"><!-- output injected --></div>
+  </div>
+</div></section>
+
+<!-- CALLOUT: orthogonality -->
+<div class="wrap">
+  <div class="callout">
+    <h3>⚠️ The easiest thing to misread: two independent flags, and the single-profile no-op</h3>
+    <p style="margin:0;color:#f0d6e6"><code>screen_version</code> controls "grid vs. single-profile card feed"; <code>declining_visitors_place</code> controls "whether the decline UI appears." They're <b>independent</b> (any combination is valid) — <b>but the decline UI only exists in the grid path.</b> The single feed's interaction model is swipe-up / skip, so there's no place for the decline UI to live:</p>
+    <div class="matrix">
+      <div class="mx act"><div class="h">baseline + grid_and_profile → decline UI shows</div>Grid cells become <code>DeclineVisitorLike.GridCell</code>, and the detail sheet wraps a <code>DeclineVisitorLike.FullProfile</code> overlay.</div>
+      <div class="mx act"><div class="h">baseline + none → plain grid</div>Baseline cells, no decline UI.</div>
+      <div class="mx noop"><div class="h">single_profile + grid_and_profile → <span style="color:var(--amber)">no-op</span></div>The flag is set, but there's no stage for it. (The feed's swipe-up still calls the decline API internally — unrelated to this flag.)</div>
+      <div class="mx noop"><div class="h">single_profile + none → <span style="color:var(--amber)">no-op</span></div>Identical to the cell above.</div>
+    </div>
+    <p style="margin:12px 0 0;color:var(--muted);font-size:.85rem">In plain terms: turning on single-profile doesn't "turn off decline" — it just takes away the stage the decline UI needs. Evidence: <code>CardFeedView</code> / <code>CardFeedViewModel</code> contain no reference to <code>declineLikesEnabled</code> at all (grep-confirmed), and the package's <code>.feed</code> content case carries neither a <code>GridPresentation</code> nor <code>CellActions</code>.</p>
+  </div>
+</div>
+
+<!-- CATALOG -->
+<section id="catalog"><div class="wrap">
+  <h2><span class="n">5</span>Full config catalog</h2>
+  <p class="sub">The Visitors tab is driven by <b>15 Flagr flags</b> (<code>visitors/*</code>) parsed into <code>VisitorsProperties</code>, plus 4 non-Flagr inputs (gender, premium, review-mode, reskin). The new version folds a handful of them into the immutable <code>Configuration</code> (which has 3 fields); the rest live on the <code>@Observable GridPresentation</code> or are read inside closures. Open each entry for the old vs. new effect.</p>
+  <div class="filterbar">
+    <input id="cfgSearch" placeholder="🔍 Search configs (name / what it controls / file…)" oninput="renderCatalog()">
+    <button class="fbtn on" data-f="all" onclick="setFilter(this)">All</button>
+    <button class="fbtn" data-f="flagr" onclick="setFilter(this)">Flagr</button>
+    <button class="fbtn" data-f="derived" onclick="setFilter(this)">Derived</button>
+    <button class="fbtn" data-f="config" onclick="setFilter(this)">Into Configuration</button>
+  </div>
+  <div id="catalogList"></div>
+</div></section>
+
+<!-- API -->
+<section id="api"><div class="wrap">
+  <h2><span class="n">6</span>API / data layer</h2>
+  <p class="sub">The old version routes its 4 endpoints through <code>VisitorsManager</code> (decline is the exception — it lives in <code>WhoViewedMeStore</code>). The new version uses the stateless <code>VisitorsRepository</code> to build the request, parse, filter, and map to an entity, with <b>byte-for-byte identical</b> request parameters.</p>
+  <div class="scrollx"><table class="tbl">
+    <thead><tr><th>Endpoint</th><th>When it fires</th><th class="colhead-old">Old caller</th><th class="colhead-new">New caller</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="api-pill v4">POST /v4/users/visitors/list</span></td>
+        <td><b>Old</b>: at startup (default layout hits local+worldwide) / tab appears / page change<br><b>New</b>: eager <code>loadFirstPageIfNeeded()</code> on entry / grid first-load / refetch when switching to an empty tab / load-more</td>
+        <td><code>VisitorsManager.fetchLocalVisitors</code> / <code>fetchWorldwideVisitors</code></td>
+        <td><code>VisitorsRepository.fetch(_:page:)</code></td>
+        <td>Local/worldwide visitors, paged; response has <code>visitors[]</code> + <code>total_count</code></td>
+      </tr>
+      <tr>
+        <td><span class="api-pill v5">POST /v5/users/visitors</span></td>
+        <td><b>Old</b>: at startup (filters layout) / filter change / load-more<br><b>New</b>: reload after applying filters / single-profile feed first-load / filters-grid page change</td>
+        <td><code>VisitorsManager.refetchVisitors</code> / <code>loadMoreVisitors(filters:)</code></td>
+        <td><code>VisitorsRepository.fetchFiltered(_:page:)</code></td>
+        <td>Filtered visitors (can include a default distance), paged; an empty first page fires <code>filters_no_results</code></td>
+      </tr>
+      <tr>
+        <td><span class="api-pill v4">GET /v4/users/my_likes</span></td>
+        <td><b>Old</b>: enter You-Liked tab / pull-to-refresh / load-more<br><b>New</b>: switch to the You-Liked tab / load-more</td>
+        <td><code>VisitorsManager.fetchMyLikes(page:)</code></td>
+        <td><code>VisitorsRepository.fetchMyLikes(page:)</code></td>
+        <td>"You Liked" (people <i>you</i> liked). A different entity (<code>BWFFriend</code> → <code>Visitor</code>, no coordinates / no last-seen) and <b>doesn't count toward the badge</b></td>
+      </tr>
+      <tr>
+        <td><span class="api-pill dec">POST /v4/decline_visitors</span></td>
+        <td>Pass on a visitor (grid decline, or the feed's swipe-up skip)</td>
+        <td><code>WhoViewedMeStore.declineLike</code> (<code>VisitorsManager</code> itself has no decline)</td>
+        <td><code>VisitorsRepository.decline(visitorID:)</code></td>
+        <td>Decline a visitor; body's <code>id</code> is the viewer's <code>uuid</code> (not its <code>id</code>), and both treat HTTP <code>200</code> as success</td>
+      </tr>
+      <tr>
+        <td><span class="api-pill v4">GET /v4/users/{hang|bang}/{fbId}</span></td>
+        <td>Send a like to a visitor (hang / bang)</td>
+        <td colspan="2"><code>BWFServiceController.requestFriendAction</code> (shared old + new; not a Visitors-specific endpoint)</td>
+        <td>Send the interaction → may trigger a match</td>
+      </tr>
+    </tbody>
+  </table></div>
+  <h3>Why the new version still touches <code>VisitorsManager</code> (~a dozen references)</h3>
+  <p class="sub" style="max-width:none">Two reasons remain. <b>(1) App-wide counts the singleton still owns:</b> the tab badge, the paywall's <code>visitor_count</code>, and the Picks upsell trigger. The new host recomputes its own counts and then <code>.send()</code>s them <i>back</i> into the singleton's subjects so the existing consumers keep working (a "reverse edge"). One detail: the paywall's <i>likes-you</i> count is now computed locally in the new path, not read from the singleton. <b>(2) A few analytics events</b> still log through <code>VisitorsManager</code>. The references are spread across <code>VisitorsHostingController</code> (+ its <code>+SingleProfile</code> extension) and <code>YouLikedViewController</code>. <br><b>Aside:</b> there's no dedicated count endpoint — counts come from each list's <code>total_count</code>, and the aggregate badge is recomputed locally by comparing each visitor's last-seen against the last time the tab was opened.</p>
+</div></section>
+
+<!-- DEPS -->
+<section id="deps"><div class="wrap">
+  <h2><span class="n">7</span>Module dependencies</h2>
+  <p class="sub">The core shift: <span class="old">singleton / Storyboard / ObjC anchors</span> → <span class="new">package / injected closures / @Observable value types</span>.</p>
+  <div class="scrollx"><table class="tbl">
+    <thead><tr><th>Module / service</th><th class="colhead-old">How the old version uses it</th><th class="colhead-new">How the new version uses it</th></tr></thead>
+    <tbody id="depBody"></tbody>
+  </table></div>
+  <h3>The UIKit ↔ SwiftUI bridge</h3>
+  <ul class="clean">
+    <li><b>The host's child:</b> a <code>UIHostingController&lt;Visitors.Screen&gt;</code>.</li>
+    <li><b>Navigation as closures:</b> <code>CellActions</code> (defined in the package), the profile-detail handler, You-Liked, and the single-profile handlers — all injected from the host.</li>
+    <li><b>A shared UIKit detail page, sandwiched both ways:</b> <code>BWFFullProfileDetailsVC</code> is a <span class="new">Swift class (not ObjC)</span>. The new code wraps it back into SwiftUI via <code>FullProfileDetailsView</code> (a <code>UIViewControllerRepresentable</code>), forming a <b>UIKit → SwiftUI → UIKit sandwich</b>. (The view-controller chain is pure Swift, but the viewer <i>model objects</i> it carries are still ObjC.)</li>
+    <li><b>The old version's ~5 forward SwiftUI embeds:</b> the filters empty state, the filters footer / empty-response view, the single-profile feed (<code>LikesFeed.HostingView</code>), the photo-verified intro, and the filters sheet.</li>
+  </ul>
+</div></section>
+
+<!-- DESIGN NOTES -->
+<section id="notes"><div class="wrap">
+  <h2><span class="n">8</span>Intentional design decisions</h2>
+  <p class="sub">A few things in the new version look unusual on purpose. They're choices, not bugs.</p>
+  <div class="divergence intent"><div class="h">The pager doesn't use the native <code>TabView(.page)</code></div><div class="d">SwiftUI's paged <code>TabView</code> mis-lays-out on the very first swipe, so <code>Visitors.PagerView</code> is a custom horizontal paging <code>ScrollView</code> with a <code>SegmentHeader</code>. The reason is written in the file's header comment.</div></div>
+  <div class="divergence intent"><div class="h">The detail flow keeps the "last selected viewer"</div><div class="d"><code>VisitorsDetailContext</code> mirrors a long-standing quirk of the old <code>WhoViewedMeStore</code>: the selected viewer is only ever assigned, never cleared. Copying that is what lets store-dispatched actions (decline / delete) target the right list afterward.</div></div>
+  <div class="divergence intent"><div class="h">In single-profile mode, the two distance tabs share one filtered list</div><div class="d">That single list feeds both feeds (each gets its own card cursor) and is also used only as the source for the badge count — it's never shown as a tab of its own.</div></div>
+  <div class="divergence intent"><div class="h">Reskin is gone — the reskinned look is now the baseline</div><div class="d">After v79 the reskin is no longer a toggle; the geist font, gradient background, pink underline, etc. are unconditional. Any doc that still mentions a reskin flag is out of date.</div></div>
+</div></section>
+
+<!-- GLOSSARY -->
+<section id="glossary"><div class="wrap">
+  <h2><span class="n">9</span>Glossary</h2>
+  <div class="grid-cards" id="glossaryGrid"></div>
+</div></section>
+
+<footer><div class="wrap">
+  <p><b>Things that look one way but are another (the code wins):</b> (1) the <code>CoreDataModels</code> folder name is a historical leftover — there's no Core Data, just an in-memory identity map; (2) <code>BWFFullProfileDetailsVC</code> is a Swift class, not ObjC; (3) the <code>visitors/implementation</code> chain is pure Swift (Flagr → <code>@UserDefault</code> → enum), not an ObjC-backed remote-config value; (4) the grid-vs-feed render switch is in the package's <code>Visitors.Screen</code> (its <code>TabContentView</code>), not in <code>Visitors.Layout</code>; (5) two methods both return <code>isFemale()</code> — <code>showOnlyThoseWhoLikedMeInVisitors()</code> feeds the request's <code>likes_only</code>, while <code>displayVisitorsToUser()</code> drives blur / gating / empty states / analytics. Don't mix them up.</p>
+  <p>Markdown version of this page: <code>visitors-tab-swiftui-architecture.md</code>.</p>
+</div></footer>
+
+<script>
+// startOnLoad:false → render each diagram only when its container is visible.
+// mermaid 10.9.6 throws "Syntax error in text" if it tries to render a display:none
+// element (it can't measure text), so we lazy-render on first reveal instead.
+mermaid.initialize({startOnLoad:false,theme:'dark',themeVariables:{fontSize:'13px'},flowchart:{useMaxWidth:true,htmlLabels:true}});
+const _archDone={old:false,new:false};
+async function ensureArch(which){
+  if(_archDone[which])return;
+  const el=document.getElementById(which==='old'?'archOld':'archNew');
+  _archDone[which]=true;
+  try{ await mermaid.run({nodes:[el]}); }
+  catch(e){ _archDone[which]=false; el.innerHTML='<pre style="color:#ff8aa0;white-space:pre-wrap">mermaid render failed: '+(e&&e.message||e)+'</pre>'; }
+}
+function showArch(which){
+  document.getElementById('archOld').classList.toggle('show',which==='old');
+  document.getElementById('archNew').classList.toggle('show',which==='new');
+  document.getElementById('btnOld').classList.toggle('on',which==='old');
+  document.getElementById('btnNew').classList.toggle('on',which==='new');
+  // wait one frame so the now-visible element has layout before mermaid measures it
+  requestAnimationFrame(()=>ensureArch(which));
+}
+window.addEventListener('load',()=>showArch('old'));
+
+/* ---------- CONFIG CATALOG DATA (verified against code) ---------- */
+const CONFIGS=[
+ {name:"implementation",kind:"flagr",inConfig:true,flagr:"visitors/implementation",prop:"VisitorsProperties.implementation",type:'String enum "uikit"/"swiftui"',def:"uikit (off = the old version, unchanged)",
+  what:"Chooses SwiftUIVisitorsWireframe vs. VisitorsContainerWireframe (a whole-tab switch)",
+  old:"flag = uikit → VisitorsContainerWireframe (AppMasterWireframe.makeVisitorsWireframe)",
+  new:"flag = swiftui → SwiftUIVisitorsWireframe. A parse failure falls back to .uikit",
+  ui:"The root view controller of the whole Visitors tab",beh:"The only thing deciding old vs. new; every other config is still read on both paths",
+  ortho:"Independent of all other configs: it only picks the implementation, it doesn't change the variant",
+  gotcha:"There's a single <code>switch</code> in <code>makeVisitorsWireframe</code>, but it's reached from <b>two</b> call sites: the initial tab build, and <code>rebuildVisitorsTab</code> (triggered by <code>onFlagrUpdate</code>) → a live Flagr change can swap the implementation mid-session. It's a pure-Swift chain, not ObjC-backed."},
+
+ {name:"screen_version",kind:"flagr",inConfig:true,flagr:"visitors/screen_version",prop:"VisitorsProperties.screenVersion",type:'String enum "baseline"/"single_profile"',def:"baseline (parse failure also returns baseline)",
+  what:"Renders the viewed-me lists as a grid or as a single-profile card feed",
+  old:"shouldShowSingleProfile → installSingleProfileFeedIfNeeded() lays a SwiftUI feed over the grid's collection view and hides the collection view",
+  new:"makeConfiguration maps the app enum to the package enum; makeLayout pre-builds .grid / .feed content. The real render switch is in the package's Visitors.Screen (TabContentView), not in Visitors.Layout",
+  ui:"The distance tabs' content area; single-profile swaps in a card feed",beh:"Data paging and the interaction model differ (grid tap vs. feed swipe-up)",
+  ortho:"Independent of declining_visitors_place, but single-profile makes decline a no-op. Stacks with filters (makeFiltersLayout also takes singleProfile)",
+  gotcha:"Only affects the viewed-me distance/filters screens — <b>the You-Liked tab uses BWFMyLikesVC and doesn't read this flag</b>. The app and the package use two different ScreenVersion types (the app's is string-backed, the package's is a plain Equatable)."},
+
+ {name:"declining_visitors_place",kind:"flagr",inConfig:true,flagr:"visitors/declining_visitors_place",prop:'decliningVisitorsPlace + shouldShowDeclineLikes',type:'String "none"/"grid_and_profile"',def:'"none" → shouldShowDeclineLikes = false',
+  what:"Whether the decline interaction is enabled on grid cells and the full-profile detail",
+  old:"Grid cell → DeclineVisitorLike.GridCell (taller cell); detail → the wireframe wraps a DeclineVisitorLike.FullProfile overlay, gated on shouldShowDeclineLikes",
+  new:"makeConfiguration → Configuration.declineLikesEnabled; the same value is also handed to GridPresentation.declineLikesEnabled, which GridView reads. The detail decline overlay is gated the same way",
+  ui:"Grid cells become decline cells + the detail gets a decline overlay",beh:"Availability of the decline-like action",
+  ortho:"Lives only in the grid path; single-profile makes it a no-op (true in both old and new, via different mechanisms)",
+  gotcha:"<b>The core gotcha</b>: under single-profile this flag is a complete no-op (see the callout above). On the new path, GridPresentation's copy is the one that's actually consumed; Configuration's copy mainly participates in the Equatable diff."},
+
+ {name:"filtersEnabled",kind:"flagr",inConfig:true,flagr:"visitors/filters_enabled",prop:"VisitorsProperties.filtersEnabled",type:"Bool",def:"false",
+  what:"Top-level shape: filters layout vs. the default 3-segment layout",
+  old:"VisitorsContainerWireframe, a two-level decision: false → .default (3 tabs + segmented header + inline You-Liked); true → .filtersOnLikes (single list + filter header + separate You-Liked page), then picks V2/V1 by filtersV2Enabled",
+  new:"makeConfiguration: filtersEnabled ? (filtersV2 ? .filtersV2 : .filtersV1) : .default → Configuration.TopLevel; makeLayout switches on topLevel",
+  ui:"Header (segmented vs. filter picker), the set of tabs, whether You-Liked is its own page",beh:"Data source (filtered vs. distance/likes) and navigation",
+  ortho:"Nested with filtersV2Enabled (only consulted when true); stacks with screen_version",
+  gotcha:"Old and new are the same two-level decision tree (the new code's comment says it mirrors VisitorsContainerWireframe). Easy to mis-read as a single boolean — when true there's still the V2 sub-branch."},
+
+ {name:"filtersV2Enabled",kind:"flagr",inConfig:true,flagr:"visitors/filters_v2_enabled",prop:"VisitorsProperties.filtersV2Enabled",type:"Bool",def:"false",
+  what:"Filter-picker UI version (V1 vs. V2)",
+  old:"VisitorsContainerWireframe picks .filtersOnLikes(version:); the version flows into VisitorsContainer to build the V1/V2 picker",
+  new:"makeConfiguration picks .filtersV2 / .filtersV1; the coordinator splits V1/V2 (SwiftUIVisitorsWireframe+Filters)",
+  ui:"FilterPickers V1 vs. V2 (distance slider / age / gender picker styling)",beh:"V2 treats worldwide as an explicit user choice (VisitorsFiltersMapper); it also affects the filtered request's default distance and the filters footer",
+  ortho:"Nested inside filtersEnabled (a complete no-op when that's false, in both versions)",
+  gotcha:"When filtersEnabled is false this flag is ignored — the default path never looks at it."},
+
+ {name:"filtersList",kind:"flagr",inConfig:false,flagr:"visitors/filters_list",prop:"VisitorsProperties.filtersList",type:"[String:Bool]? (UserDefaults dict)",def:"nil",
+  what:"Which filter chips/pickers show in the filters layout",
+  old:"VisitorsContainer's enabledFilters",new:"VisitorsHostingController's enabledFilterKeys (comment: 'exactly VisitorsContainer's enabledFilters (parity)')",
+  ui:"The visible filters in the filter header",beh:"The set of filter params sent to the server",
+  ortho:"Only meaningful on the filtersEnabled path; interacts with review-mode (which drops groupPlay/partner)",
+  gotcha:"Review-mode dropping groupPlay/partner is a second pass on top of filtersList."},
+
+ {name:"profile_details_blur_enabled",kind:"flagr",inConfig:false,flagr:"visitors/profile_details_blur_enabled",prop:"VisitorsProperties.profileDetailsBlurEnabled",type:"Bool",def:"false",
+  what:"Whether the name/age/location text on a grid cell gets a blur bar (not the whole photo)",
+  old:"BWFProfileTransparentCell: when !premium && flag && !female, swaps the name/interaction labels for a blur bar",
+  new:"VisitorsHostingController → GridPresentation.detailsBlurred → GridCell (two material bars)",
+  ui:"The name/location blur bar on a grid cell",beh:"Purely visual; only for non-premium, non-female users",
+  ortho:"Independent of the photo blur; <b>mutually exclusive with decline</b> — a decline cell isn't given detailsBlurred, so the text blur doesn't apply",
+  gotcha:"Despite the 'details' in the name, it <b>only affects grid cells</b> — the detail page and single-profile don't consume it. It's recomputed live, so buying premium mid-session removes the blur immediately."},
+
+ {name:"showWorldwideDistanceOption",kind:"flagr",inConfig:false,flagr:"visitors/show_worldwide_option",prop:"VisitorsProperties.showWorldwideDistanceOption",type:"Bool",def:"false",
+  what:"Whether the distance slider includes a worldwide step",
+  old:"Appends a worldwide step to the distance picker",new:"Same; choosing worldwide makes VisitorsFiltersMapper skip max_distance_km",
+  ui:"The worldwide step on the distance picker",beh:"Choosing worldwide → no distance ceiling is sent",
+  ortho:"Only meaningful in the filters layout with the distance filter enabled",
+  gotcha:"<b>The Flagr key and the property name don't match</b>: key = <code>visitors/show_worldwide_option</code> but property = <code>showWorldwideDistanceOption</code>. Easy to confuse when cross-referencing."},
+
+ {name:"firstScreenLocationAvailable",kind:"flagr",inConfig:false,flagr:"visitors/first_screen_location_available",prop:"VisitorsProperties.firstScreenLocationAvailable",type:"Bool",def:"false",
+  what:"Whether the ProfileCard's first screen shows location",
+  old:"The location row on the single-profile card's first screen",new:"Same — read lazily inside the single-profile card builder closure",
+  ui:"The location row on the ProfileCard first screen",beh:"Display only",
+  ortho:"<b>Only read on the screen_version == single_profile path</b> (a complete no-op on the grid path) — one of the few configs explicitly tied to single-profile",
+  gotcha:"It's <b>not</b> a GridPresentation field — it's read as a per-card closure when building the feed's cards, so it's re-read each time, not frozen."},
+
+ {name:"localDistanceKM",kind:"flagr",inConfig:false,flagr:"visitors/local_distance_km",prop:"VisitorsProperties.localDistanceKM",type:"Int (raw 0 → getter returns 100)",def:"100 km (hard-coded in the getter)",
+  what:"The local query's threshold_km, and the default max_distance_km when filters have no distance selected",
+  old:"Read when VisitorsManager builds the request",new:"Read when VisitorsRepository.fetch / fetchFiltered builds the request",
+  ui:"Indirect (affects the size of the local result set)",beh:"The query's distance parameter",
+  ortho:"Different meaning from nearbyMaxDistanceKm (local/default vs. the filter's nearby option)",
+  gotcha:"The 100 km default is hard-coded in the getter (applied when raw = 0), not a Flagr default."},
+
+ {name:"nearbyMaxDistanceKm",kind:"flagr",inConfig:false,flagr:"visitors/nearby_max_distance_km",prop:"VisitorsProperties.nearbyMaxDistanceKm",type:"Int (raw 0 → getter returns 97)",def:"97 km (hard-coded in the getter)",
+  what:"The max_distance_km sent when the filter's 'nearby' option is selected",
+  old:"The nearby branch's distance",new:"Same (via VisitorsFiltersMapper)",
+  ui:"Indirect",beh:"The filter query's distance parameter (nearby branch)",
+  ortho:"Only meaningful in V2's explicit nearby/worldwide selection model",
+  gotcha:"Hard-coded default of 97 km — a different number from localDistanceKM's 100 km, so it's easy to assume they're the same."},
+
+ {name:"agePreferences",kind:"flagr",inConfig:false,flagr:"visitors/age_preferences",prop:"VisitorsProperties.agePreferences",type:"Codable {minDelta:Int}",def:"minDelta = 5",
+  what:"The age range picker's minDelta (the minimum gap between the two ends)",
+  old:"The age range picker's minimum span",new:"Same",
+  ui:"The minimum span on the age range slider",beh:"Limits how narrow the selectable age range can be",
+  ortho:"Only meaningful in the filters layout with the age filter enabled",
+  gotcha:"The default minDelta = 5 is the struct's static default, used as a fallback when the model fails to load."},
+
+ {name:"distanceOptions",kind:"flagr",inConfig:false,flagr:"visitors/distance_options",prop:"VisitorsProperties.distanceOptions",type:"[{distanceKm,distanceMi}]?",def:"nil (treated as [])",
+  what:"The discrete steps on the distance slider (km is sent to the server, mi is displayed)",
+  old:"FilterPickers V1 distance steps (defaulting to [])",new:"Same (V2 doesn't use it directly — it uses the explicit nearby/worldwide model)",
+  ui:"The distance slider's ticks",beh:"The set of selectable distances → max_distance_km",
+  ortho:"Only in the filters layout with the distance filter; stacks with showWorldwideDistanceOption",
+  gotcha:"When nil the picker has no steps (it can end up empty)."},
+
+ {name:"profilePhotoBlurPixelRadius",kind:"flagr",inConfig:false,flagr:"visitors/profile_photo_blur_pixel_radius",prop:"VisitorsProperties.profilePhotoBlurPixelRadius",type:"CGFloat (raw 0 → 10)",def:"10 (hard-coded in the getter)",
+  what:"The blur strength on a grid cell's whole visitor photo",
+  old:"The photo blur on BWFProfileTransparentCell",new:"GridPresentation.blurRadius → GridCell's .blur(radius:)",
+  ui:"The photo blur on a grid cell",beh:"Premium or female users → 0 (no blur)",
+  ortho:"Independent of placeholder blur and details blur",
+  gotcha:"The unblurred condition is recomputed live. Because GridPresentation is observable, buying premium mid-session un-blurs the cells on the spot (this needed care, since LazyVGrid builds cells lazily)."},
+
+ {name:"placeholderBlurPixelRadius",kind:"flagr",inConfig:false,flagr:"visitors/placeholder_blur_pixel_radius",prop:"VisitorsProperties.placeholderBlurPixelRadius",type:"CGFloat (returns the raw value)",def:"0 (no hard-coded fallback)",
+  what:"The blur on the photo placeholder",
+  old:"The placeholder blur",new:"Same",
+  ui:"The placeholder blur while an image is loading",beh:"Purely visual",
+  ortho:"Independent of profilePhotoBlurPixelRadius (loaded photo vs. placeholder)",
+  gotcha:"<b>Unlike profilePhoto, the placeholder has no hard-coded default</b> (the getter returns raw = 0); profilePhoto falls back to 10."},
+
+ {name:"gender → likes_only",kind:"derived",inConfig:false,flagr:"(none — user.isFemale())",prop:"showOnlyThoseWhoLikedMeInVisitors() / displayVisitorsToUser()",type:"Derived Bool (gender)",def:"female → true",
+  what:"The result set (likes_only), un-blur, interaction availability, and which empty state shows",
+  old:"likes_only via showOnlyThoseWhoLikedMeInVisitors(); empty state / blur / analytics via displayVisitorsToUser()",
+  new:"likes_only via the same method (VisitorsRepository); empty state via StillWaitingEmptyView",
+  ui:"Empty state (StillWaiting vs. GoPremium vs. NoVisitors), blur, the interaction CTA",beh:"Female users get likes_only = true (only people who liked them) and bypass the paywall",
+  ortho:"Merges with the premium axis into canInteract / unblurred (OR); independent of all Flagr configs",
+  gotcha:"<b>Naming trap</b>: two methods both return isFemale() — <code>showOnlyThoseWhoLikedMeInVisitors()</code> feeds the request's likes_only, and <code>displayVisitorsToUser()</code> feeds the UI/blur/analytics. Don't mix them up."},
+
+ {name:"premium",kind:"derived",inConfig:false,flagr:"(none — user.isPremiumUser)",prop:"BWFAccountController.user.isPremiumUser",type:"Derived Bool",def:"premium → unlocked",
+  what:"Blur, interaction, the boost banner, the empty-state matrix",
+  old:"Photo/details blur, the interaction gate, the boost banner, and the empty states are all gated on premium",
+  new:"refresh() mirrors unblurred / detailsBlurred / nonPremiumGated / premiumUser / superchargeUser onto GridPresentation; canInteract, the boost banner header, and the distance empty content all read from it",
+  ui:"Blur, boost banner, empty states",beh:"The interaction gate; a mid-session purchase unlocks immediately",
+  ortho:"<b>Not the only unlock key</b>: the gate is isPremiumUser || isFemale (non-premium women are unlocked too). The empty-state matrix <b>only lives in the grid path</b> — single-profile is a no-op for it (it uses LikesEmptyView/FiltersEmptyView)",
+  gotcha:"premiumUser/superchargeUser are mirrored into the @Observable GridPresentation (rather than read directly from the account) so that a silently-flipped server flag is only re-evaluated when refresh() writes it in."},
+
+ {name:"review-mode",kind:"derived",inConfig:false,flagr:"(none — appIsInReviewVersion())",prop:"BWFAccountController.appIsInReviewVersion()",type:"Derived Bool",def:"review build → true",
+  what:"Hidden filters (groupPlay/partner), a fixed supercharge price, skipping some popups",
+  old:"A second pass over VisitorsContainer's enabledFilters",new:"VisitorsHostingController's enabledFilterKeys (comment: 'exactly VisitorsContainer's enabledFilters (parity)')",
+  ui:"The set of filter chips, the supercharge price",beh:"App-Review compliance (hide adult-oriented filters, fix the price)",
+  ortho:"Layered on top of filtersList (a second pass); independent of Flagr",
+  gotcha:"The new code explicitly marks the parity comment, aligning with the old enabledFilters."},
+
+ {name:"reskin",kind:"removed",inConfig:false,flagr:"(removed)",prop:"(removed)",type:"N/A",def:"always on = baseline",
+  what:"(Historical) the geist font, gradient background, pink underline, .offer styling, etc.",
+  old:"Before removal it was reskin-first / always-on (not a real A/B)",
+  new:"The reskin styling is simply the baseline now — no flag branch anywhere",
+  ui:"All baseline",beh:"Applied unconditionally",
+  ortho:"No longer an axis (collapsed into a constant)",
+  gotcha:"Removed after v79. The code has no reskin reference left (the only hits are leftover SVG filenames in the asset catalog). Any doc still mentioning a reskin flag is out of date."}
+];
+
+const KIND_BADGE={flagr:["flagr","Flagr"],derived:["derived","Derived"],removed:["removed","Removed"],struct:["struct","struct"]};
+let curFilter="all";
+function setFilter(b){curFilter=b.dataset.f;document.querySelectorAll('.filterbar .fbtn').forEach(x=>x.classList.toggle('on',x===b));renderCatalog();}
+function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+// allow our intentional <code>/<b> tags in data: render raw (data is trusted, authored above)
+function renderCatalog(){
+  const q=(document.getElementById('cfgSearch').value||"").toLowerCase();
+  const list=document.getElementById('catalogList');list.innerHTML="";
+  CONFIGS.filter(c=>{
+    if(curFilter==="flagr"&&c.kind!=="flagr")return false;
+    if(curFilter==="derived"&&c.kind!=="derived")return false;
+    if(curFilter==="config"&&!c.inConfig)return false;
+    if(q){const hay=(c.name+c.what+c.old+c.new+c.gotcha+c.flagr+c.prop).toLowerCase();if(!hay.includes(q))return false;}
+    return true;
+  }).forEach(c=>{
+    const kb=KIND_BADGE[c.kind];
+    const el=document.createElement('details');el.className='cfg';
+    el.innerHTML=`<summary>
+        <span class="nm">${esc(c.name)}</span>
+        <span class="badge ${kb[0]}">${kb[1]}</span>
+        ${c.inConfig?'<span class="badge struct">→ Configuration</span>':''}
+        <span class="what">${c.what}</span>
+      </summary>
+      <div class="body">
+        <div class="row2">
+          <div class="kv"><div class="t">Flagr key</div><div class="v"><code>${esc(c.flagr)}</code></div></div>
+          <div class="kv"><div class="t">Swift property</div><div class="v"><code>${esc(c.prop)}</code></div></div>
+          <div class="kv"><div class="t">Type</div><div class="v">${esc(c.type)}</div></div>
+          <div class="kv"><div class="t">Value / default</div><div class="v">${esc(c.def)}</div></div>
+        </div>
+        <div class="row2">
+          <div class="imp oldbox"><h4><span class="b" style="background:var(--old)"></span>Old behavior</h4><div class="row">${c.old}</div></div>
+          <div class="imp newbox"><h4><span class="b" style="background:var(--new)"></span>New behavior</h4><div class="row">${c.new}</div></div>
+        </div>
+        <div class="row2">
+          <div class="kv"><div class="t">Affects UI</div><div class="v">${c.ui}</div></div>
+          <div class="kv"><div class="t">Affects behavior</div><div class="v">${c.beh}</div></div>
+        </div>
+        <div class="kv"><div class="t">Independence / interactions</div><div class="v">${c.ortho}</div></div>
+        <div class="gotcha"><b>⚑ Note</b>&nbsp;&nbsp;${c.gotcha}</div>
+      </div>`;
+    list.appendChild(el);
+  });
+  if(!list.children.length)list.innerHTML='<p style="color:var(--dim)">No matching configs.</p>';
+}
+
+/* ---------- DEPENDENCIES ---------- */
+const DEPS=[
+ ["UIKit","The whole Container / VCs / cells / xibs","Just the host shell (VisitorsHostingController) + the navigation bridge"],
+ ["SwiftUI","5 UIHostingController embeds","The whole tab"],
+ ["DesignSystem (package)","A few components (FiltersEmptyView, DeclineVisitorLike…)","The whole UI lives here, with <b>no networking code</b> (only SwiftUI / Entities / Localization / Foundation / SDWebImageSwiftUI)"],
+ ["Entities (package)","VisitorsFilterKey, etc.","The Visitor value type, Configuration"],
+ ["VisitorsManager (singleton)","The single data source (god-object)","Only ~12 references left, for app-wide counts (the reverse <code>.send()</code>) and a few analytics events"],
+ ["VisitorsRepository (injected)","—","The new data layer: stateless transport, wrapped in loader closures injected into ListViewModel"],
+ ["WhoViewedMeStore","A Combine reducer subscribing to the singleton","<b>Removed</b>"],
+ ["AppMasterStore","dispatch / paywall / IAP","Same, plus an InputHandler for DeclineLike / DeleteSelected / ShowPaywall / CheckForRefresh / premiumStateUpdated / SuperchargeIAPStatus"],
+ ["BWFAccountController (ObjC)","user / premium / isFemale / hiddenProfiles","Still read through the ObjC anchor, but the UI is pure Swift"],
+ ["Storyboard / xib","The WhoViewedMeSub scene + several xib cells / empty states","<b>No Interface Builder</b> — pure SwiftUI"],
+ ["RemoteConfigProperties / Flagr","Read once and frozen at init","makeConfiguration folds 5 into Configuration; the rest are read lazily in closures / mirrored onto GridPresentation"],
+ ["BehavioralTelemetry","Driven by the cell presenter's trackVisible/Hidden","Isolated in a +BehavioralTelemetry extension; GridView onAppear/onDisappear"],
+ ["Analytics","Referenced directly","Injected as closures; the package imports no analytics at all"],
+ ["BWFFullProfileDetailsVC","UIKit push","<b>Shared</b> (a Swift class); the reverse edge wraps it back into SwiftUI via UIViewControllerRepresentable (a sandwich)"],
+];
+function renderDeps(){
+  const b=document.getElementById('depBody');
+  b.innerHTML=DEPS.map(d=>`<tr><td>${d[0]}</td><td>${d[1]}</td><td>${d[2]}</td></tr>`).join("");
+}
+
+/* ---------- GLOSSARY ---------- */
+const GLOSS=[
+ ["VisitorsManager","The old god-object singleton: networking + per-distance cache + aggregate counts + analytics + the Flagr fetch at startup + logout cleanup. The new version keeps ~12 references, only for counts and a few analytics events."],
+ ["VisitorsRepository","The new stateless transport struct: it only builds requests, parses, filters, and maps to entities — no state, no cache, injectable and testable."],
+ ["WhoViewedMeStore","The old Combine reducer that subscribed to the singleton's refresh and dispatched fetch/decline. Removed in the new version."],
+ ["ListViewModel","The new @Observable paginated-list state machine. You inject a loadPage closure; it has loadFirstPageIfNeeded / refreshFromTop / reloadFirstPageUnlessUnchanged."],
+ ["CardFeedViewModel","The new single-feed cursor state machine. It identifies the current card by visitor.id (not the legacy uuid) and prefetches 5 ahead."],
+ ["GridPresentation","An @Observable bag of per-user cell-rendering inputs (blur / last-seen / gating / premium). Because it's observable, a mid-session change flips the UI immediately."],
+ ["Visitors.Configuration","The immutable, parsed-once value type: TopLevel × ScreenVersion × declineLikesEnabled. Equatable, so changes are cheap to diff."],
+ ["Configuration vs. GridPresentation","Configuration is immutable / set once (the variant shape); GridPresentation is mutable / observable / per-render (the per-user flags). The two layers of the new config."],
+ ["Visitors.Layout","The top-level shape enum: .pager([PagerTab]) or .single(header, Content); Content = .grid / .feed."],
+ ["VisitorsDetailContext","The new detail-page reply channel. It remembers which list the last-opened viewer came from, deliberately copying the old 'keep the last selected viewer' quirk."],
+ ["MultiPageViewController / PagerView","The paging container. Old = UIPageViewController + CustomSegmentHeader; new = a custom paging ScrollView + SegmentHeader (not the native TabView(.page))."],
+ ["Flagr","The remote-config system. Keys live in FlagrConfigClient+Keys.swift, values are parsed in +Values.swift, and the result lands in VisitorsProperties. The Visitors tab uses 15 visitors/* keys."],
+];
+function renderGloss(){
+  document.getElementById('glossaryGrid').innerHTML=GLOSS.map(g=>`<div class="card"><div class="k">${g[0]}</div><p>${g[1]}</p></div>`).join("");
+}
+
+/* ---------- EXPLORER ---------- */
+const ST={implementation:"swiftui",filtersEnabled:false,filtersV2Enabled:false,screenVersion:"baseline",decline:"none",gender:"male",premium:false,detailsBlur:false};
+function seg(label,fk,key,opts){
+  return `<div class="ctrl"><div class="lbl">${label}${fk?`<span class="fk">${fk}</span>`:''}</div><div class="seg" data-key="${key}">`+
+    opts.map(o=>`<button data-val="${o.v}" ${o.dis?'disabled':''} class="${ST[key]===o.v?'on':''}" onclick="pick('${key}','${o.v}')">${o.t}</button>`).join("")+`</div></div>`;
+}
+function renderControls(){
+  const c=document.getElementById('controls');
+  const v2dis=!ST.filtersEnabled;
+  c.innerHTML=
+    seg("Implementation","visitors/implementation","implementation",[{v:"uikit",t:"Old UIKit"},{v:"swiftui",t:"New SwiftUI"}])+
+    seg("Filters","visitors/filters_enabled","filtersEnabled",[{v:false,t:"Off (default)"},{v:true,t:"On (filters)"}])+
+    seg("Filters version","visitors/filters_v2_enabled","filtersV2Enabled",[{v:false,t:"V1",dis:v2dis},{v:true,t:"V2",dis:v2dis}])+
+    seg("screen_version","visitors/screen_version","screenVersion",[{v:"baseline",t:"grid"},{v:"single_profile",t:"single feed"}])+
+    seg("Decline place","visitors/declining_visitors_place","decline",[{v:"none",t:"none"},{v:"grid_and_profile",t:"grid_and_profile"}])+
+    seg("Gender","account state","gender",[{v:"male",t:"male"},{v:"female",t:"female"}])+
+    seg("Premium","account state","premium",[{v:false,t:"free"},{v:true,t:"premium"}])+
+    seg("Details blur","visitors/profile_details_blur_enabled","detailsBlur",[{v:false,t:"off"},{v:true,t:"on"}]);
+}
+function pick(k,v){
+  if(v==="true")v=true; if(v==="false")v=false;
+  ST[k]=v;
+  if(k==="filtersEnabled"&&v===false)ST.filtersV2Enabled=false;
+  renderControls();renderOutput();
+}
+function renderOutput(){
+  const o=document.getElementById('output');
+  const topLevel=!ST.filtersEnabled?"default":(ST.filtersV2Enabled?"filtersV2":"filtersV1");
+  const isGrid=ST.screenVersion==="baseline";
+  const shouldDecline=ST.decline==="grid_and_profile";
+  const declineActive=shouldDecline&&isGrid;
+  const female=ST.gender==="female";
+  const unblurred=ST.premium||female;
+  const canInteract=ST.premium||female;
+  const detailsBlurActive=!ST.premium&&ST.detailsBlur&&!female&&isGrid;
+  const likesOnly=female;
+  const isNew=ST.implementation==="swiftui";
+
+  // resolved chips
+  const shapeTxt={default:"default (3 tabs: Local/Worldwide/You-Liked + segmented)",filtersV1:"filtersV1 (single filtered list + V1 filter chips, You-Liked is its own page)",filtersV2:"filtersV2 (single filtered list + V2 filter chips, You-Liked is its own page)"}[topLevel];
+  let chips=`
+    <span class="chip">impl: <b>${isNew?'new SwiftUI':'old UIKit'}</b></span>
+    <span class="chip">topLevel: <b>${topLevel}</b></span>
+    <span class="chip">render: <b>${isGrid?'grid':'single card feed'}</b></span>
+    <span class="chip">decline UI: <b>${declineActive?'on':'off'}</b></span>
+    <span class="chip">likes_only: <b>${likesOnly}</b></span>
+    <span class="chip">can interact: <b>${canInteract?'yes':'no (gate → paywall)'}</b></span>
+    <span class="chip">photo blur: <b>${(isGrid&&!unblurred)?'yes':'no'}</b></span>`;
+
+  // OLD implementation breakdown
+  function oldDesc(){
+    let header = topLevel==="default" ? "VisitorsContainer + MultiPageViewController (segmented header)" : `VisitorsContainer + FilterPickers ${topLevel==='filtersV2'?'V2':'V1'} header`;
+    let render = isGrid ? "BWFWhoViewedMeViewController + UICollectionView + BWFProfileTransparentCell (xib)" : "LikesFeed.HostingView (SwiftUI over the hidden collection view)";
+    let youliked = topLevel==="default" ? "You-Liked = inline tab BWFMyLikesVC" : "You-Liked = nav-bar button → push BWFMyLikesVC";
+    let data = "VisitorsManager singleton (+ Combine)";
+    return {header,render,youliked,data};
+  }
+  function newDesc(){
+    let header = topLevel==="default" ? "VisitorsHostingController + Visitors.Screen → PagerView (SegmentHeader)" : `Visitors.Screen → VStack + FiltersView ${topLevel==='filtersV2'?'V2':'V1'} header`;
+    let render = isGrid ? "Visitors.GridView (2-column LazyVGrid) + GridCell" : "Visitors.CardFeedView + CardFeedViewModel";
+    let youliked = topLevel==="default" ? "You-Liked = youLiked grid inside the pager" : "You-Liked = nav-bar button → push YouLikedViewController";
+    let data = "VisitorsRepository (stateless) + ListViewModel/CardFeedViewModel";
+    return {header,render,youliked,data};
+  }
+  const od=oldDesc(),nd=newDesc();
+  const focus = isNew ? nd : od;
+
+  // APIs
+  let apis=[];
+  if(topLevel==="default")apis.push(['v4','POST /v4/users/visitors/list','local+worldwide, paged']);
+  else apis.push(['v5','POST /v5/users/visitors','filtered, paged']);
+  apis.push(['v4','GET /v4/users/my_likes','You-Liked ('+(topLevel==='default'?'inline tab':'after push')+')']);
+  if(declineActive||!isGrid)apis.push(['dec','POST /v4/decline_visitors',isGrid?'grid decline':'feed swipe-up skip (independent of the flag)']);
+  const apiHtml=apis.map(a=>`<span class="api-pill ${a[0]}">${a[1]}</span> <span style="color:var(--dim);font-size:.78rem">${a[2]}</span>`).join("<br>");
+
+  // empty state
+  let emptyState = !isGrid ? "single-profile: uses LikesEmptyView / FiltersEmptyView (not the empty-state matrix)"
+    : female ? "female: StillWaiting / browse nearby"
+    : ST.premium ? "premium male: NoVisitors / supercharge banner"
+    : "non-premium male: GoPremium upsell (tap a cell → paywall)";
+
+  // warnings
+  let warns="";
+  if(!isGrid && shouldDecline){
+    warns+=`<div class="warn"><span class="ic">⚠️</span><div><b>decline no-op:</b> with screen_version = single_profile, <code>declining_visitors_place = grid_and_profile</code> has no effect — the decline UI only lives in the grid path. The feed's swipe-up still calls the decline API (unrelated to this flag).</div></div>`;
+  }
+  if(!ST.filtersEnabled && ST.filtersV2Enabled){
+    warns+=`<div class="warn"><span class="ic">⚠️</span><div><b>filtersV2 ignored:</b> when filtersEnabled = false, filtersV2Enabled is a complete no-op (the default path never looks at it).</div></div>`;
+  }
+  if(detailsBlurActive){
+    warns+=`<div class="warn"><span class="ic">ℹ️</span><div><b>text blur active:</b> non-premium, non-female + flag on + grid → the cell's name/location get a blur bar. Note it's mutually exclusive with decline cells.</div></div>`;
+  }
+  if(ST.detailsBlur && !isGrid){
+    warns+=`<div class="warn"><span class="ic">⚠️</span><div><b>details blur no-op:</b> this flag only affects grid cells — the single-profile feed and the detail page don't consume it.</div></div>`;
+  }
+  if(female){
+    warns+=`<div class="warn ok"><span class="ic">✓</span><div><b>female account:</b> likes_only = true (only people who liked them), and the paywall is bypassed (blur off + can interact) even when non-premium. The empty state is StillWaiting.</div></div>`;
+  }
+  if(!warns)warns=`<div class="warn ok"><span class="ic">✓</span><div>No special no-ops or gotchas for this combination.</div></div>`;
+
+  o.innerHTML=`
+    <div class="panel">
+      <div class="lbl" style="margin-bottom:10px">🧩 Resolved result</div>
+      <div class="resolved">${chips}</div>
+    </div>
+    <div class="twocol">
+      <div class="imp oldbox"><h4><span class="b" style="background:var(--old)"></span>Old UIKit shows</h4>
+        <div class="row"><span class="t">header / container</span>${od.header}</div>
+        <div class="row"><span class="t">list rendering</span>${od.render}</div>
+        <div class="row"><span class="t">You-Liked</span>${od.youliked}</div>
+        <div class="row"><span class="t">data layer</span>${od.data}</div>
+      </div>
+      <div class="imp newbox"><h4><span class="b" style="background:var(--new)"></span>New SwiftUI shows</h4>
+        <div class="row"><span class="t">header / container</span>${nd.header}</div>
+        <div class="row"><span class="t">list rendering</span>${nd.render}</div>
+        <div class="row"><span class="t">You-Liked</span>${nd.youliked}</div>
+        <div class="row"><span class="t">data layer</span>${nd.data}</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="lbl">📡 APIs this combination calls (showing: ${isNew?'new':'old'})</div>
+      <div style="margin-top:8px">${apiHtml}</div>
+      <div class="lbl" style="margin-top:14px">🪧 Empty state</div>
+      <div style="color:#cfc9e6;font-size:.86rem;margin-top:4px">${emptyState}</div>
+    </div>
+    ${warns}`;
+}
+
+renderControls();renderOutput();renderCatalog();renderDeps();renderGloss();
+</script>
+</body>
+</html>
